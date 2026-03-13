@@ -30,7 +30,7 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
-      path: '/plan-details',
+      path: '/plan-details/:id?',
       name: 'plan-details',
       component: PlanDetails,
       meta: { requiresAuth: true }
@@ -59,6 +59,9 @@ router.beforeEach((to) => {
   const auth = useAuth()
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
   const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin)
+
+  if (to.path === '/login' && auth.isAuthenticated.value)
+    return auth.isAdmin.value ? '/admin' : '/dashboard'
 
   if (requiresAuth && !auth.isAuthenticated.value)
     return '/login'

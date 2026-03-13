@@ -35,6 +35,15 @@
           rounded="lg"
           @click="mobile ? drawer = false : null"
         />
+
+        <v-divider class="my-2" />
+
+        <v-list-item
+          title="View as User"
+          prepend-icon="mdi-account-eye-outline"
+          rounded="lg"
+          @click="viewAsUser"
+        />
       </v-list>
 
       <v-spacer />
@@ -74,9 +83,13 @@ watch(mobile, (isMobile) => {
   drawer.value = !isMobile
 })
 
-function logout() {
-  auth.logout()
-  router.push("/login")
+async function logout() {
+  await auth.logout()
+}
+
+function viewAsUser() {
+  if (mobile.value) drawer.value = false
+  router.push("/dashboard")
 }
 </script>
 

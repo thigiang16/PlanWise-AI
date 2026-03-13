@@ -1,8 +1,5 @@
 <template>
-  <v-app>
-    <Navbar />
-
-    <v-main>
+  <v-main>
       <v-container v-if="plan" class="plan-page py-8">
         <v-btn variant="text" class="back-btn mb-4" prepend-icon="mdi-arrow-left" @click="router.back()">
           Back to Results
@@ -110,24 +107,42 @@
           </v-col>
         </v-row>
       </v-container>
-    </v-main>
-  </v-app>
+
+      <v-container v-else-if="isLoading" class="plan-page py-8">
+        <v-card class="hero-card pa-6" rounded="xl" elevation="2">
+          <p class="subtitle mb-0">Loading plan details...</p>
+        </v-card>
+      </v-container>
+
+      <v-container v-else class="plan-page py-8">
+        <v-card class="hero-card pa-6" rounded="xl" elevation="2">
+          <h2 class="text-h5 mb-2">Plan not found</h2>
+          <p class="subtitle mb-0">We could not load this saved plan right now.</p>
+        </v-card>
+      </v-container>
+  </v-main>
 </template>
 
 <script setup lang="ts">
 import { ref } from "vue"
-import { useRouter } from "vue-router"
-import Navbar from "@/components/Navbar.vue"
-import { savePlan, type GeneratedEventPlan } from "@/services/aiService"
+import { useRoute, useRouter } from "vue-router"
+import { useEventSearchState } from "@/composables/useEventSearchState"
+import { aiService, savePlan, type GeneratedEventPlan } from "@/services/aiService"
 
 type PlanDetailsModel = GeneratedEventPlan & {
   saved?: boolean
 }
 
 const router = useRouter()
+const route = useRoute()
+const { getEventById } = useEventSearchState()
+
+const routeId = typeof route.params.id === "string" ? route.params.id : ""
 const savedPlan = sessionStorage.getItem("selectedPlan")
-const rawPlan = savedPlan ? JSON.parse(savedPlan) : history.state.plan
+const rawSavedPlan = savedPlan ? JSON.parse(savedPlan) : null
+const rawPlan = getEventById(routeId) || rawSavedPlan || history.state.plan
 const plan = ref<PlanDetailsModel | null>(normalizePlan(rawPlan))
+const isLoading = ref(false)
 
 function normalizeList(value: unknown): string[] {
   if (Array.isArray(value)) {
@@ -168,6 +183,47 @@ function normalizePlan(value: unknown): PlanDetailsModel | null {
     saved: candidate.saved ?? false
   }
 }
+
+function decodeRouteIdToTitle(id: string) {
+  try {
+    return decodeURIComponent(id).trim()
+  } catch {
+    return ""
+  }
+}
+
+async function loadPlanByRouteId() {
+  if (plan.value || !routeId)
+    return
+
+  const possibleTitle = decodeRouteIdToTitle(routeId)
+
+  if (!possibleTitle)
+    return
+
+  isLoading.value = true
+
+  try {
+    const generatedPlans = await aiService.generateEventIdeas(possibleTitle)
+    const matchedPlan = generatedPlans.find(
+      item => item.title.trim().toLowerCase() === possibleTitle.toLowerCase()
+    ) || generatedPlans[0]
+
+    if (!matchedPlan)
+      return
+
+    plan.value = normalizePlan({ ...matchedPlan, saved: true })
+
+    if (plan.value)
+      sessionStorage.setItem("selectedPlan", JSON.stringify(plan.value))
+  } catch {
+    // Keep fallback UI when loading fails.
+  } finally {
+    isLoading.value = false
+  }
+}
+
+loadPlanByRouteId()
 
 async function toggleFavorite() {
   if (!plan.value?.title)

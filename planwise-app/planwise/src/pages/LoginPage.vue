@@ -62,7 +62,7 @@ const password = ref('')
 const submit = async () => {
   try {
     await auth.login(email.value, password.value)
-    router.push('/dashboard')
+    router.push(auth.isAdmin.value ? '/admin' : '/dashboard')
   } catch {
     alert('Invalid login')
   }

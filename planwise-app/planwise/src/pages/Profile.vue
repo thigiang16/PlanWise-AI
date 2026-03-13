@@ -1,42 +1,5 @@
 <template>
-  <v-app>
-
-    <!-- NAVBAR -->
-    <v-app-bar flat elevation="1">
-
-      <v-container class="topbar d-flex align-center">
-
-        <div class="logo">
-          PlanWise <span class="ai-badge">AI</span>
-        </div>
-
-        <v-spacer></v-spacer>
-
-        <v-btn variant="text" class="topbar-btn" to="/">
-          Home
-        </v-btn>
-
-        <v-btn variant="text" class="topbar-btn" to="/dashboard">
-          Dashboard
-        </v-btn>
-
-        <v-btn variant="text" class="topbar-btn" prepend-icon="mdi-account-outline" to="/profile">
-          Profile
-        </v-btn>
-
-        <v-btn v-if="auth.isAdmin.value" variant="text" class="topbar-btn" to="/admin/dashboard">
-          Admin
-        </v-btn>
-
-        <v-btn variant="text" class="topbar-btn" prepend-icon="mdi-logout" @click="handleLogout">
-          Logout
-        </v-btn>
-
-      </v-container>
-
-    </v-app-bar>
-
-    <v-main>
+  <v-main>
       <v-container class="profile-page py-8">
 
         <div class="heading-wrap mb-6">
@@ -49,11 +12,6 @@
           <h2 class="text-h6 mb-4">Account Information</h2>
 
           <div class="info-row">
-            <span class="label">Name</span>
-            <strong>{{ auth.userName.value || "-" }}</strong>
-          </div>
-
-          <div class="info-row">
             <span class="label">Email</span>
             <strong>{{ auth.userEmail.value || "-" }}</strong>
           </div>
@@ -63,18 +21,25 @@
         <v-card class="pa-6 mb-6 section-card saved-card" rounded="xl" elevation="3">
           <h2 class="text-h6 mb-4">Saved Plans</h2>
 
-          <v-list v-if="savedPlans.length" class="list-surface">
-            <v-list-item
+          <div v-if="savedPlans.length" class="saved-plan-grid">
+            <router-link
               v-for="plan in savedPlans"
-              :key="plan"
-              prepend-icon="mdi-heart"
+              :key="plan.id"
+              class="saved-plan-link"
+              :to="{ name: 'plan-details', params: { id: plan.id } }"
             >
-              {{ plan }}
-            </v-list-item>
-          </v-list>
+              <v-card class="saved-plan-item" rounded="lg" elevation="1">
+                <div class="saved-plan-row">
+                  <v-icon color="teal" class="saved-plan-icon">mdi-heart</v-icon>
+                  <span class="saved-plan-title">{{ plan.title }}</span>
+                  <v-icon color="#94a3b8" size="18">mdi-chevron-right</v-icon>
+                </div>
+              </v-card>
+            </router-link>
+          </div>
 
           <p v-else class="text-medium-emphasis">
-            No saved plans yet.
+            You have no saved plans yet.
           </p>
         </v-card>
 
@@ -99,26 +64,21 @@
 
       </v-container>
     </v-main>
-
-  </v-app>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue"
-import { useRouter } from "vue-router"
 import { useAuth } from "@/composables/useAuth"
-import { getRecentSearches, getSavedPlans } from "../services/profileService"
+import {
+  getRecentSearches,
+  getSavedPlans,
+  type SavedPlanListItem
+} from "../services/profileService"
 
-const router = useRouter()
 const auth = useAuth()
 
-const savedPlans = ref<string[]>([])
+const savedPlans = ref<SavedPlanListItem[]>([])
 const recentSearches = ref<string[]>([])
-
-function handleLogout() {
-  auth.logout()
-  router.push("/login")
-}
 
 onMounted(async () => {
   savedPlans.value = await getSavedPlans()
@@ -179,39 +139,46 @@ onMounted(async () => {
   border-radius: 12px;
 }
 
-.logo {
-  font-weight: 700;
+.saved-plan-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
 }
 
-.ai-badge {
-  background: teal;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 12px;
-  margin-left: 4px;
+.saved-plan-link {
+  text-decoration: none;
+}
+
+.saved-plan-item {
+  border: 1px solid #dbeafe;
+  background: #ffffff;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.saved-plan-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  border-color: #5eead4;
+}
+
+.saved-plan-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.saved-plan-icon {
+  flex-shrink: 0;
+}
+
+.saved-plan-title {
+  flex: 1;
+  color: #0f172a;
+  font-weight: 600;
 }
 
 @media (max-width: 640px) {
-  .topbar {
-    flex-wrap: wrap;
-    row-gap: 8px;
-    padding-block: 10px;
-  }
-
-  .topbar-btn {
-    min-width: 0;
-    padding-inline: 8px;
-  }
-
-  .topbar-btn :deep(.v-btn__prepend) {
-    margin-inline-end: 0;
-  }
-
-  .topbar-btn :deep(.v-btn__content) {
-    font-size: 0;
-  }
-
   .profile-page {
     padding-top: 12px;
   }

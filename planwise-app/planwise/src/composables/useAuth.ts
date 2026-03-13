@@ -6,6 +6,8 @@ const roles = ref<string[]>([])
 const userName = ref("")
 const userEmail = ref("")
 const TOKEN_KEY = "token"
+const EMAIL_KEY = "email"
+const ROLES_KEY = "roles"
 
 function parseJwt(token: string) {
   const base64Url = token.split(".")[1]
@@ -16,11 +18,32 @@ function parseJwt(token: string) {
   return JSON.parse(atob(base64))
 }
 
+function clearAuthState() {
+  accessToken.value = ""
+  roles.value = []
+  userName.value = ""
+  userEmail.value = ""
+}
+
+function clearStoredAuth() {
+  localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem(EMAIL_KEY)
+  localStorage.removeItem(ROLES_KEY)
+}
+
 function extractRole(payload: Record<string, unknown>) {
-  const role = payload.role
+  const rawRoles = payload.role
     ?? payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"]
 
-  return typeof role === "string" ? role : ""
+  if (Array.isArray(rawRoles)) {
+    return rawRoles.filter((value): value is string => typeof value === "string")
+  }
+
+  if (typeof rawRoles === "string") {
+    return [rawRoles]
+  }
+
+  return []
 }
 
 function extractEmail(payload: Record<string, unknown>) {
@@ -37,27 +60,50 @@ function extractName(payload: Record<string, unknown>) {
   return typeof name === "string" ? name : ""
 }
 
+function isTokenValid(token: string): boolean {
+  try {
+    const payload = parseJwt(token)
+
+    if (typeof payload.exp !== "number")
+      return true
+
+    return payload.exp * 1000 > Date.now()
+  } catch {
+    return false
+  }
+}
+
 function restoreAuthState() {
   const savedToken = localStorage.getItem(TOKEN_KEY)
 
   if (!savedToken)
     return
 
+  if (!isTokenValid(savedToken)) {
+    clearAuthState()
+    clearStoredAuth()
+    return
+  }
+
   try {
     accessToken.value = savedToken
 
     const decoded = parseJwt(savedToken)
-    const role = extractRole(decoded)
-    userEmail.value = extractEmail(decoded)
-    userName.value = extractName(decoded)
+    const decodedRoles = extractRole(decoded)
 
-    roles.value = role ? [role] : []
+    userEmail.value = localStorage.getItem(EMAIL_KEY) || extractEmail(decoded)
+    userName.value = extractName(decoded)
+    roles.value = decodedRoles.length
+      ? decodedRoles
+      : JSON.parse(localStorage.getItem(ROLES_KEY) || "[]")
+
+    if (userEmail.value)
+      localStorage.setItem(EMAIL_KEY, userEmail.value)
+
+    localStorage.setItem(ROLES_KEY, JSON.stringify(roles.value))
   } catch {
-    accessToken.value = ""
-    roles.value = []
-    userName.value = ""
-    userEmail.value = ""
-    localStorage.removeItem(TOKEN_KEY)
+    clearAuthState()
+    clearStoredAuth()
   }
 }
 
@@ -65,7 +111,7 @@ restoreAuthState()
 
 export function useAuth() {
 
-  const isAuthenticated = computed(() => !!accessToken.value)
+  const isAuthenticated = computed(() => !!accessToken.value && isTokenValid(accessToken.value))
   const isAdmin = computed(() => roles.value.includes("Admin"))
 
   const login = async (email: string, password: string) => {
@@ -87,10 +133,14 @@ export function useAuth() {
     localStorage.setItem(TOKEN_KEY, accessToken.value)
 
     const decoded = parseJwt(accessToken.value)
-    const role = extractRole(decoded)
-    userEmail.value = extractEmail(decoded)
+    const decodedRoles = extractRole(decoded)
+
+    userEmail.value = data.email || extractEmail(decoded) || email
     userName.value = extractName(decoded)
-    roles.value = role ? [role] : []
+    roles.value = decodedRoles.length ? decodedRoles : Array.isArray(data.roles) ? data.roles : []
+
+    localStorage.setItem(EMAIL_KEY, userEmail.value)
+    localStorage.setItem(ROLES_KEY, JSON.stringify(roles.value))
   }
 
   const register = async (name: string, email: string, password: string) => {
@@ -107,12 +157,15 @@ export function useAuth() {
       throw new Error("Register failed")
   }
 
-  const logout = () => {
-    accessToken.value = ""
-    roles.value = []
-    userName.value = ""
-    userEmail.value = ""
-    localStorage.removeItem(TOKEN_KEY)
+  const logout = async () => {
+    clearAuthState()
+    clearStoredAuth()
+
+    const { default: router } = await import("@/router")
+
+    if (router.currentRoute.value.path !== "/login") {
+      router.push("/login")
+    }
   }
 
   const getAuthHeaders = () => ({

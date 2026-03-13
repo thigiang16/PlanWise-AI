@@ -1,36 +1,5 @@
 <template>
-  <v-app>
-    <v-app-bar flat elevation="1">
-      <v-container class="topbar d-flex align-center">
-        <div class="logo">
-          PlanWise <span class="ai-badge">AI</span>
-        </div>
-
-        <v-spacer></v-spacer>
-
-        <v-btn variant="text" class="topbar-btn" to="/">
-          Home
-        </v-btn>
-
-        <v-btn variant="text" class="topbar-btn" to="/dashboard">
-          Dashboard
-        </v-btn>
-
-        <v-btn variant="text" class="topbar-btn" prepend-icon="mdi-account-outline" to="/profile">
-          Profile
-        </v-btn>
-
-        <v-btn v-if="auth.isAdmin.value" variant="text" class="topbar-btn" to="/admin/dashboard">
-          Admin
-        </v-btn>
-
-        <v-btn variant="text" class="topbar-btn" prepend-icon="mdi-logout" @click="handleLogout">
-          Logout
-        </v-btn>
-      </v-container>
-    </v-app-bar>
-
-    <v-main>
+  <v-main>
       <v-container class="dashboard py-8">
         <v-card class="prompt-area pa-6" rounded="xl" elevation="3">
           <div class="heading-wrap">
@@ -147,25 +116,18 @@
           <p class="text-medium-emphasis">Enter an event prompt and generate your first recommendations.</p>
         </v-card>
       </v-container>
-    </v-main>
-  </v-app>
+  </v-main>
 </template>
 
 <script setup lang="ts">
 import { ref } from "vue"
 import { useRouter } from "vue-router"
-import { useAuth } from "@/composables/useAuth"
-import { aiService, savePlan, type GeneratedEventPlan } from "@/services/aiService"
+import { useEventSearchState, type EventSearchResult } from "@/composables/useEventSearchState"
+import { aiService, savePlan } from "@/services/aiService"
 
-type GeneratedEventPlanWithSaved = GeneratedEventPlan & {
-  saved?: boolean
-}
-
-const prompt = ref("")
 const router = useRouter()
-const auth = useAuth()
+const { searchPrompt: prompt, events: results, setPrompt, setEvents } = useEventSearchState()
 
-const results = ref<GeneratedEventPlanWithSaved[]>([])
 const isGenerating = ref(false)
 const errorMessage = ref("")
 
@@ -181,7 +143,8 @@ async function generateIdeas() {
 
   try {
     const plans = await aiService.generateEventIdeas(prompt.value)
-    results.value = plans.map(plan => ({ ...plan, saved: false }))
+    setPrompt(prompt.value)
+    setEvents(plans)
   } catch {
     results.value = []
     errorMessage.value = "Unable to generate ideas right now. Please try again."
@@ -190,21 +153,16 @@ async function generateIdeas() {
   }
 }
 
-function handleLogout() {
-  auth.logout()
-  router.push("/login")
-}
-
-async function toggleFavorite(plan: GeneratedEventPlanWithSaved) {
+async function toggleFavorite(plan: EventSearchResult) {
   if (!plan.saved) {
     await savePlan(plan.title)
     plan.saved = true
   }
 }
 
-function viewDetails(plan: GeneratedEventPlanWithSaved) {
+function viewDetails(plan: EventSearchResult) {
   sessionStorage.setItem("selectedPlan", JSON.stringify(plan))
-  router.push({ name: "plan-details" })
+  router.push({ name: "plan-details", params: { id: plan.id } })
 }
 </script>
 
@@ -289,19 +247,6 @@ function viewDetails(plan: GeneratedEventPlanWithSaved) {
   border: 1px dashed rgba(20, 184, 166, 0.35);
 }
 
-.logo {
-  font-weight: 700;
-}
-
-.ai-badge {
-  background: teal;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 12px;
-  margin-left: 4px;
-}
-
 @media (max-width: 900px) {
   .results-header {
     flex-direction: column;
@@ -310,25 +255,6 @@ function viewDetails(plan: GeneratedEventPlanWithSaved) {
 }
 
 @media (max-width: 640px) {
-  .topbar {
-    flex-wrap: wrap;
-    row-gap: 8px;
-    padding-block: 10px;
-  }
-
-  .topbar-btn {
-    min-width: 0;
-    padding-inline: 8px;
-  }
-
-  .topbar-btn :deep(.v-btn__prepend) {
-    margin-inline-end: 0;
-  }
-
-  .topbar-btn :deep(.v-btn__content) {
-    font-size: 0;
-  }
-
   .prompt-area {
     padding: 18px !important;
   }
