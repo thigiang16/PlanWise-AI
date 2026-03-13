@@ -74,10 +74,18 @@ const submit = async () => {
 .auth-card{
   border-radius:16px;
   box-shadow:0 10px 30px rgba(0,0,0,0.1);
+  width:100%;
+  max-width:420px;
 }
 
 .subtitle{
   color:#666;
+}
+
+@media (max-width:640px){
+.auth-card{
+padding:20px !important;
+}
 }
 
 </style>

@@ -3,7 +3,11 @@ import LandingPage from "@/pages/LandingPage.vue"
 import Login from "@/pages/LoginPage.vue"
 import Register from "@/pages/RegisterPage.vue"
 import Dashboard from "@/pages/Dashboard.vue"
+import PlanDetails from "@/pages/PlanDetails.vue"
+import Profile from "@/pages/Profile.vue"
 import AdminDashboard from "@/pages/AdminDashboard.vue"
+import AdminOverview from "@/pages/AdminOverview.vue"
+import TemplateManagement from "@/pages/TemplateManagement.vue"
 import { useAuth } from "@/composables/useAuth"
 
 const router = createRouter({
@@ -21,10 +25,33 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/profile',
+      component: Profile,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/plan-details',
+      name: 'plan-details',
+      component: PlanDetails,
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/admin',
       component: AdminDashboard,
+      redirect: '/admin/dashboard',
+      children: [
+        {
+          path: 'dashboard',
+          component: AdminOverview
+        },
+        {
+          path: 'templates',
+          component: TemplateManagement
+        }
+      ],
       meta: { requiresAuth: true, requiresAdmin: true }
     },
+    
   ]
 })
 

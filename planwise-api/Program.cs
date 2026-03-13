@@ -2,7 +2,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PlanWiseApi.Data;
 using PlanWiseApi.Models;
+using PlanWiseApi.Models.Config;
 using PlanWiseApi.Services;
+using Microsoft.Extensions.Options;
+using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,12 +36,15 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = false,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
+        NameClaimType = ClaimTypes.Email,
         IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(key!)
         )
     };
 });
 
+
+// CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",
@@ -50,8 +56,29 @@ builder.Services.AddCors(options =>
         });
 });
 
+
 // Services
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+
+// Azure Configurations
+builder.Services.Configure<AzureOpenAIConfig>(
+    builder.Configuration.GetSection("AzureOpenAI"));
+
+builder.Services.Configure<AzureAISearchConfig>(
+    builder.Configuration.GetSection("AzureAISearch"));
+
+
+// HttpClient for AI services
+builder.Services.AddHttpClient();
+
+
+// AI Services
+builder.Services.AddScoped<EmbeddingService>();
+builder.Services.AddScoped<SearchService>();
+builder.Services.AddScoped<ChatService>();
+builder.Services.AddScoped<TemplateIndexService>();
+builder.Services.AddScoped<UserActivityService>();
 
 
 var app = builder.Build();
@@ -73,6 +100,8 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+
+// Seed Admin User
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -94,5 +123,10 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
+using (var scope = app.Services.CreateScope())
+{
+    var searchService = scope.ServiceProvider.GetRequiredService<SearchService>();
+    await searchService.EnsureIndexAsync();
+}
 
 app.Run();

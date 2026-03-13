@@ -2,6 +2,8 @@ import { ref, computed } from "vue"
 
 const accessToken = ref("")
 const roles = ref<string[]>([])
+const userName = ref("")
+const userEmail = ref("")
 const TOKEN_KEY = "token"
 
 const API = "http://localhost:5080"
@@ -22,6 +24,20 @@ function extractRole(payload: Record<string, unknown>) {
   return typeof role === "string" ? role : ""
 }
 
+function extractEmail(payload: Record<string, unknown>) {
+  const email = payload.email
+    ?? payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"]
+
+  return typeof email === "string" ? email : ""
+}
+
+function extractName(payload: Record<string, unknown>) {
+  const name = payload.name
+    ?? payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"]
+
+  return typeof name === "string" ? name : ""
+}
+
 function restoreAuthState() {
   const savedToken = localStorage.getItem(TOKEN_KEY)
 
@@ -33,11 +49,15 @@ function restoreAuthState() {
 
     const decoded = parseJwt(savedToken)
     const role = extractRole(decoded)
+    userEmail.value = extractEmail(decoded)
+    userName.value = extractName(decoded)
 
     roles.value = role ? [role] : []
   } catch {
     accessToken.value = ""
     roles.value = []
+    userName.value = ""
+    userEmail.value = ""
     localStorage.removeItem(TOKEN_KEY)
   }
 }
@@ -69,6 +89,8 @@ export function useAuth() {
 
     const decoded = parseJwt(accessToken.value)
     const role = extractRole(decoded)
+    userEmail.value = extractEmail(decoded)
+    userName.value = extractName(decoded)
     roles.value = role ? [role] : []
   }
 
@@ -89,6 +111,8 @@ export function useAuth() {
   const logout = () => {
     accessToken.value = ""
     roles.value = []
+    userName.value = ""
+    userEmail.value = ""
     localStorage.removeItem(TOKEN_KEY)
   }
 
@@ -102,6 +126,8 @@ export function useAuth() {
     logout,
     isAuthenticated,
     isAdmin,
+    userName,
+    userEmail,
     getAuthHeaders
   }
 }

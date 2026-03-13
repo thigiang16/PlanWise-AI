@@ -1,4 +1,4 @@
-namespace PlanwiseApi.Models
+namespace PlanWiseApi.Models
 {
     public class EventTemplate
     {
@@ -10,6 +10,20 @@ namespace PlanwiseApi.Models
 
         public string Description { get; set; } = "";
 
+        public string LocationType { get; set; } = ""; 
+        
+        public int SuggestedGroupSize { get; set; }
+
+        public string FoodIdeas { get; set; } = "";
+
+        public string Activities { get; set; } = "";
+
+        public string Decorations { get; set; } = "";
+
+        public string BudgetLevel { get; set; } = "";
+
         public string Tags { get; set; } = "";
+
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

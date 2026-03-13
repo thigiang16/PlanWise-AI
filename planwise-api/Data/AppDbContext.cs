@@ -11,5 +11,9 @@ namespace PlanWiseApi.Data
         }
 
         public DbSet<User> Users => Set<User>();
+        public DbSet<EventTemplate> EventTemplates => Set<EventTemplate>();
+        public DbSet<SavedPlan> SavedPlans => Set<SavedPlan>();
+
+        public DbSet<UserSearchHistory> UserSearchHistories => Set<UserSearchHistory>();
     }
 }
