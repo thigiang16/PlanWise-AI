@@ -1,12 +1,11 @@
 import { ref, computed } from "vue"
+import { API_BASE } from "@/services/api"
 
 const accessToken = ref("")
 const roles = ref<string[]>([])
 const userName = ref("")
 const userEmail = ref("")
 const TOKEN_KEY = "token"
-
-const API = "http://localhost:5080"
 
 function parseJwt(token: string) {
   const base64Url = token.split(".")[1]
@@ -71,7 +70,7 @@ export function useAuth() {
 
   const login = async (email: string, password: string) => {
 
-    const res = await fetch(`${API}/api/auth/login`, {
+    const res = await fetch(`${API_BASE}/api/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -96,7 +95,7 @@ export function useAuth() {
 
   const register = async (name: string, email: string, password: string) => {
 
-    const res = await fetch(`${API}/api/auth/register`, {
+    const res = await fetch(`${API_BASE}/api/auth/register`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
